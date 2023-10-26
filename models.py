@@ -3,7 +3,7 @@ from sqlalchemy import ForeignKey
 
 db = SQLAlchemy()
 
-# Define the association table for the many-to-many relationship between users and projects using project members table
+#many-to-many relationship between users and projects using project members table
 class ProjectMember(db.Model):
     __tablename__ = 'project_members'
 
