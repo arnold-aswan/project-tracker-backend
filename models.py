@@ -22,7 +22,7 @@ class User(db.Model):
     updated_at = db.Column(db.DateTime, onupdate=db.func.now())
 
     #Many to many relationshio with the user and projects
-    projects = db.relationship('Project', secondary=ProjectMember, back_populates='members')
+    projects = db.relationship('Project', secondary=ProjectMember.__table__, back_populates='users')
 
 class Project(db.Model):
     __tablename__ = 'projects'
@@ -43,7 +43,36 @@ class Project(db.Model):
     project_class = db.relationship('Class', back_populates='projects')
 
     #Many-to-many relationship with users
-    members = db.relationship('User', secondary=ProjectMember, back_populates='projects')
+    users = db.relationship('User', secondary=ProjectMember.__table__, back_populates='projects')
+    def to_dict(self):
+        data = {
+            'id': self.id,
+            'name': self.name,
+            'description': self.description,
+            'admin_id': self.admin_id,
+            'github_link': self.github_link,
+            'class_id': self.class_id,
+            'created_at': self.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+        }
+
+        if self.updated_at:
+            data['updated_at'] = self.updated_at.strftime('%Y-%m-%d %H:%M:%S')
+        else:
+            data['updated_at'] = None
+
+        if self.admin:
+            data['admin'] = self.admin.to_dict()
+        else:
+            data['admin'] = None
+
+        if self.project_class:
+            data['project_class'] = self.project_class.to_dict()
+        else:
+            data['project_class'] = None
+
+        data['users'] = [user.to_dict() for user in self.users]
+
+        return data
 
 class Admins(db.Model):
     __tablename__ = 'admins'
