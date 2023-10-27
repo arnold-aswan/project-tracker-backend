@@ -1,21 +1,28 @@
-from flask import Flask, request, jsonify, make_response
+import os
+from flask import Flask, request, make_response,jsonify
+from flask_restx import Api, Resource,fields
 from flask_migrate import Migrate
-from models import db, User, Project, Admins, Class, ProjectMember
-from flask_restx import Resource, Api, fields
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask_jwt_extended import get_jwt_identity, create_access_token, create_refresh_token, JWTManager
+from flask_jwt_extended import JWTManager,get_jwt_identity, create_access_token, create_refresh_token
+from config import DevConfig
+from flask_sqlalchemy import SQLAlchemy
+from models import User, Project
+from exts import db
+from flask_cors import CORS
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///project-tracker.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.json.compact = False
+CORS(app)
+app.config.from_object(DevConfig)
 
-migrate = Migrate(app,db)
+db.init_app(app)
+
+migrate = Migrate(app, db)
 JWTManager(app)
+
+# app.json.compact = False
 
 api = Api(app)
 
-db.init_app(app)
 signup_model = api.model(
     "Signup",
     {
@@ -78,16 +85,26 @@ class Login(Resource):
     @api.expect(login_model)
     def post(self):
         data = request.get_json()
-        email = data.get("email"),
+
+        email = data.get("email")
         password = data.get("password")
 
-        db_user = User.query.filter_by(email= email).first()
-        if db_user and check_password_hash(db_user.password, password):
-            access_token = create_access_token(identity= db_user.email, fresh = True)
-            refresh_token = create_refresh_token(identity = db_user.email)
-            return jsonify(
-                {"access_token": access_token, "refresh_token": refresh_token}
-                )
         
+        db_user=User.query.filter_by(email=email).first()
+
+        if db_user and  check_password_hash(db_user.password, password):
+
+            access_token=create_access_token(identity=db_user.username, fresh=True)
+            refresh_token=create_refresh_token(identity=db_user.username)
+            return jsonify(
+                     {"access_token":access_token, "refresh_token":refresh_token}
+                 )
+
+@app.shell_context_processor
+def make_shell_context():
+    return {
+        "db": db,
+        "User": User
+    }        
 if __name__ == '__main__':
     app.run(port=5555)

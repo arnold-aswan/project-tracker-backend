@@ -1,7 +1,8 @@
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import ForeignKey
+from sqlalchemy import Column, Integer, String, Table
 
-db = SQLAlchemy()
+# Create an instance of SQLAlchemy
+from exts import db
 
 #many-to-many relationship between users and projects using project members table
 class ProjectMember(db.Model):
