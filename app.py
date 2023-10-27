@@ -15,26 +15,22 @@ db.init_app(app)
 
 
 class ProjectsResource(Resource):
-    @marshal_with({'id': fields.Integer, 'name': fields.String, 'description': fields.String, 'users': fields.List(fields.String)})
-
-
     def get(self):
-        # Query the database to get all projects and their associated users
+        # Assuming 'Project' is the SQLAlchemy model for projects
         projects = Project.query.all()
+        
+        response_dict = [{
+            'id': project.id,
+            'name': project.name,
+            'description': project.description,
+            'github_link': project.github_link,
+            'user_id': project.user_id,
+            'class_id': project.class_id,
+            'members': project.memebers,
+            'project_type': project.project_type
+        } for project in projects]
 
-        # Prepare the response data
-        result = []
-        for project in projects:
-            users = [user.username for user in project.project_users]
-            project_data = {
-                'id': project.id,
-                'name': project.name,
-                'description': project.description,
-                'users': users
-            }
-            result.append(project_data)
-
-        return result
+        return response_dict
     def post(self):
 
         data = request.form
