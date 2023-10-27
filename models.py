@@ -61,6 +61,10 @@ class Project(db.Model):
     github_link = db.Column(db.String(255), nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     class_id = db.Column(db.Integer, db.ForeignKey('classes.id'), nullable=False)
+    memebers = db.Column(db.String)
+    project_type = db.Column(db.String(50), nullable=True)
+
+
 
     # Rename the 'group_projects' property to 'project_users'.
     project_users = db.relationship('User', secondary='project_members', back_populates='project_members')
@@ -72,10 +76,27 @@ class Project(db.Model):
             'description': self.description,
             'github_link': self.github_link,
             'user_id':self.user_id,
-            'class_id':self.class_id
+            'class_id':self.class_id,
+            'members':self.memebers,
+            'project_type':self.project_type
         }
 
 project_members = db.Table('project_members',
     db.Column('project_id', db.Integer, db.ForeignKey('projects.id'), primary_key=True),
     db.Column('user_id', db.Integer, db.ForeignKey('users.id'), primary_key=True)
 )
+
+# user_in_project = db.Table('user_in_project',
+#     db.Column('user_id', db.Integer, db.ForeignKey('users.id'), primary_key=True),
+#     db.Column('project_id', db.Integer, db.ForeignKey('projects.id'), primary_key=True)
+# )
+
+# class User_in_project(db.Model):
+#     __tablename__ = 'users_in_project'
+
+#     id = db.Column(db.Integer, primary_key=True)
+#     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+#     project_id = db.Column(db.Integer, db.ForeignKey('projects.id'))
+
+#     user = db.relationship('User', backref='projects_participated', lazy=True)
+#     project = db.relationship('Project', backref='project_participants', lazy=True)

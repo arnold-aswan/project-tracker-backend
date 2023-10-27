@@ -39,7 +39,7 @@ class ProjectsResource(Resource):
 
         data = request.form
 
-        required_fields = ['name','description', 'github_link','user_id','class_id']
+        required_fields = ['name','description', 'github_link','user_id','class_id', 'memebers', 'project_type']
         for field in required_fields:
             if field not in data:
                 return {"error": f"'{field}' is required"}, 400
@@ -49,7 +49,9 @@ class ProjectsResource(Resource):
             description=data['description'],
             github_link=data['github_link'],
             user_id=data['user_id'],
-            class_id=data['class_id']
+            class_id=data['class_id'],
+            memebers=data['memebers'],
+            project_type=data['project_type']
         )
 
         db.session.add(new_project)
@@ -97,7 +99,18 @@ class ClassResource(Resource):
         response_dict = new_class.to_dict()
         return response_dict,201
     
+class ProjectUsersResource(Resource):
+    def get(self, id):
+        project = Project.query.get(id)
+
+        if project:
+            users = project.project_users  # Access the project_users relationship
+            user_data = [{'id': user.id, 'username': user.username, 'email': user.email} for user in users]
+            return user_data, 200
+        return {"message": "Project not found"}, 404
+    
 api.add_resource(ClassResource, '/classes')
+api.add_resource(ProjectUsersResource, '/projects/<int:id>')
 api.add_resource(ProjectByIdResource, '/project/<int:id>')
 api.add_resource(ProjectsResource, '/projects')
 if __name__ == '__main__':
