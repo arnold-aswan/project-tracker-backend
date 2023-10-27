@@ -30,6 +30,14 @@ def generate_fake_data():
             )
             db.session.add(project)
 
+        # seed classes table
+        for _ in range(num_classes):
+            classs = Class(
+                name=fake.word(),
+                description=fake.sentence()
+            )    
+            db.session.add(classs)
+            
         db.session.commit()
 
 if __name__ == '__main__':
