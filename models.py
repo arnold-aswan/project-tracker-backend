@@ -1,98 +1,105 @@
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import ForeignKey
 
 db = SQLAlchemy()
 
-#many-to-many relationship between users and projects using project members table
-class ProjectMember(db.Model):
-    __tablename__ = 'project_members'
-
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
-    project_id = db.Column(db.Integer, db.ForeignKey('projects.id'))
 
 class User(db.Model):
     __tablename__ = 'users'
 
     id = db.Column(db.Integer, primary_key=True)
-    first_name = db.Column(db.String(80), nullable=False)
-    last_name = db.Column(db.String(80), nullable=False)
-    username = db.Column(db.String(80), nullable=False)
-    email = db.Column(db.String(120), unique=True, nullable=False)
-    password = db.Column(db.String(128), nullable=False)
-    created_at = db.Column(db.DateTime, server_default=db.func.now())
-    updated_at = db.Column(db.DateTime, onupdate=db.func.now())
+    username = db.Column(db.String(255), unique=True, nullable=False)
+    email = db.Column(db.String(255), unique=True, nullable=False)
+    password = db.Column(db.String(255), nullable=False)
+    first_name = db.Column(db.String(80), nullable=True, default="Unknown")
+    last_name = db.Column(db.String(80), nullable=True, default="Unknown")
 
-    #Many to many relationshio with the user and projects
-    projects = db.relationship('Project', secondary=ProjectMember.__table__, back_populates='users')
 
-class Project(db.Model):
-    __tablename__ = 'projects'
+    # Rename the 'project_members_relationship' property to 'project_members'.
+    project_members = db.relationship('Project', secondary='project_members', back_populates='project_users')
 
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(80), nullable=False)
-    description = db.Column(db.String(80), nullable=False)
-    admin_id = db.Column(db.Integer, db.ForeignKey('admins.id'))
-    github_link = db.Column(db.String(80), nullable=False)
-    class_id = db.Column(db.Integer, db.ForeignKey('classes.id'))
-    created_at = db.Column(db.DateTime, server_default=db.func.now())
-    updated_at = db.Column(db.DateTime, onupdate=db.func.now())
+    # Define a one-to-many relationship for projects created by this user.
+    projects = db.relationship('Project', backref='owner', lazy=True)
 
-    #Many-to-one relationship with admins
-    admin = db.relationship('Admins', back_populates='projects')
-
-    #Many-to-one relationship with classes
-    project_class = db.relationship('Class', back_populates='projects')
-
-    #Many-to-many relationship with users
-    users = db.relationship('User', secondary=ProjectMember.__table__, back_populates='projects')
-    def to_dict(self):
-        data = {
-            'id': self.id,
-            'name': self.name,
-            'description': self.description,
-            'admin_id': self.admin_id,
-            'github_link': self.github_link,
-            'class_id': self.class_id,
-            'created_at': self.created_at.strftime('%Y-%m-%d %H:%M:%S'),
-        }
-
-        if self.updated_at:
-            data['updated_at'] = self.updated_at.strftime('%Y-%m-%d %H:%M:%S')
-        else:
-            data['updated_at'] = None
-
-        if self.admin:
-            data['admin'] = self.admin.to_dict()
-        else:
-            data['admin'] = None
-
-        if self.project_class:
-            data['project_class'] = self.project_class.to_dict()
-        else:
-            data['project_class'] = None
-
-        data['users'] = [user.to_dict() for user in self.users]
-
-        return data
-
-class Admins(db.Model):
-    __tablename__ = 'admins'
+class Admin(db.Model):
+    __tablename__ = 'admin'
 
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(80), nullable=False)
-    email = db.Column(db.String(120), unique=True, nullable=False)
-    password = db.Column(db.String(128), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), unique=True, nullable=False)
+    user = db.relationship('User', backref='admin')
 
-    #One-to-many relationship with projects
-    projects = db.relationship('Project', back_populates='admin')
+    def __init__(self, user_id):
+        self.user_id = user_id
 
 class Class(db.Model):
     __tablename__ = 'classes'
 
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(80), nullable=False)
-    description = db.Column(db.String(80), nullable=False)
+    name = db.Column(db.String(100), unique=True, nullable=False)
 
-    #One-to-many relationship with projects
-    projects = db.relationship('Project', back_populates='project_class')
+    # Foreign key for regular users
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+
+    # Foreign key for admin users
+    admin_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+
+    # Define relationships for regular users and admin users
+    users = db.relationship('User', backref='class', lazy=True, foreign_keys="Class.user_id")
+    admin = db.relationship('User', backref='admin_classes', lazy=True, foreign_keys="Class.admin_id")
+
+    def to_dict(self):
+        return{
+            'id':self.id,
+            'name':self.name,
+            'user_id':self.user_id,
+            'admin_id':self.admin_id
+        }
+
+
+class Project(db.Model):
+    __tablename__ = 'projects'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(255), nullable=False)
+    description = db.Column(db.Text, nullable=False)
+    github_link = db.Column(db.String(255), nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    class_id = db.Column(db.Integer, db.ForeignKey('classes.id'), nullable=False)
+    memebers = db.Column(db.String)
+    project_type = db.Column(db.String(50), nullable=True)
+
+
+
+    # Rename the 'group_projects' property to 'project_users'.
+    project_users = db.relationship('User', secondary='project_members', back_populates='project_members')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'description': self.description,
+            'github_link': self.github_link,
+            'user_id':self.user_id,
+            'class_id':self.class_id,
+            'members':self.memebers,
+            'project_type':self.project_type
+        }
+
+project_members = db.Table('project_members',
+    db.Column('project_id', db.Integer, db.ForeignKey('projects.id'), primary_key=True),
+    db.Column('user_id', db.Integer, db.ForeignKey('users.id'), primary_key=True)
+)
+
+# user_in_project = db.Table('user_in_project',
+#     db.Column('user_id', db.Integer, db.ForeignKey('users.id'), primary_key=True),
+#     db.Column('project_id', db.Integer, db.ForeignKey('projects.id'), primary_key=True)
+# )
+
+# class User_in_project(db.Model):
+#     __tablename__ = 'users_in_project'
+
+#     id = db.Column(db.Integer, primary_key=True)
+#     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+#     project_id = db.Column(db.Integer, db.ForeignKey('projects.id'))
+
+#     user = db.relationship('User', backref='projects_participated', lazy=True)
+#     project = db.relationship('Project', backref='project_participants', lazy=True)

@@ -1,93 +1,235 @@
 from flask import Flask, request, jsonify, make_response
 from flask_migrate import Migrate
-from models import db, User, Project, Admins, Class, ProjectMember
-from flask_restx import Resource, Api, fields
+from flask_sqlalchemy import SQLAlchemy
+from flask_restful import Api, Resource, reqparse, fields, marshal
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask_jwt_extended import get_jwt_identity, create_access_token, create_refresh_token, JWTManager
+from flask_jwt_extended import create_access_token, create_refresh_token, JWTManager
+from models import db, Project, User, Admin, project_members, Class
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///project-tracker.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.json.compact = False
 
-migrate = Migrate(app,db)
-JWTManager(app)
-
-api = Api(app)
 
 db.init_app(app)
-signup_model = api.model(
-    "Signup",
-    {
-        "first_name":fields.String(),
-        "last_name":fields.String(),
-        "username":fields.String(),
-        "email":fields.String(),
-        "password":fields.String(),
-    }
-)
 
-login_model = api.model(
-    "Login",
-    {
-        "email":fields.String(),
-        "password":fields.String(),
-    }
-)
+migrate = Migrate(app, db)
+api = Api(app)
+
+# Define API models using reqparse and fields
+signup_parser = reqparse.RequestParser()
+signup_parser.add_argument('first_name', type=str, required=True)
+signup_parser.add_argument('last_name', type=str, required=True)
+signup_parser.add_argument('username', type=str, required=True)
+signup_parser.add_argument('email', type=str, required=True)
+signup_parser.add_argument('password', type=str, required=True)
+
+login_parser = reqparse.RequestParser()
+login_parser.add_argument('email', type=str, required=True)
+login_parser.add_argument('password', type=str, required=True)
+
+project_fields = {
+    'id': fields.Integer,
+    'name': fields.String,
+    'description': fields.String,
+    'github_link': fields.String,
+    'user_id': fields.Integer,
+    'class_id': fields.Integer,
+    'members': fields.String,
+    'project_type': fields.String
+}
+
 class Projects(Resource):
-
     def get(self):
-        projects = [project.to_dict() for project in Project.query.all()]
+        projects = Project.query.all()
+        project_list = [marshal(project, project_fields) for project in projects]
 
         response_dict = {
-            "projects": projects  
+            "projects": project_list
         }
 
         return response_dict, 200
 
-api.add_resource(Projects, '/projects')
-
-# User sign-up area
-
-@api.route("/signUp", methods=["POST"])
 class Signup(Resource):
-    @api.expect(signup_model)
     def post(self):
-        # getting the user's data
-        data= request.get_json()
-        # checking if the user exists
-        email = data.get("email")
+        data = signup_parser.parse_args()
+        email = data['email']
         db_user = User.query.filter_by(email=email).first()
+
         if db_user is not None:
-            return make_response(jsonify({"message":f"user with email {email} already exists"}))
-        
+            return make_response(jsonify({"message": f"user with email {email} already exists"}))
+
         new_user = User(
-            first_name = data.get("first_name"),
-            last_name = data.get("last_name"),
-            username = data.get("username"),
-            email= data.get("email"),
-            password = generate_password_hash(data.get("password"))
+            first_name=data['first_name'],
+            last_name=data['last_name'],
+            username=data['username'],
+            email=data['email'],
+            password=generate_password_hash(data['password'])
         )
         db.session.add(new_user)
         db.session.commit()
-        return make_response(jsonify({"message":"user created successfully"}), 201)
 
-# User log-in area
-@api.route("/login", methods=["POST"])
+        return make_response(jsonify({"message": "user created successfully"}), 201)
+
 class Login(Resource):
-    @api.expect(login_model)
     def post(self):
-        data = request.get_json()
-        email = data.get("email"),
-        password = data.get("password")
+        data = login_parser.parse_args()
+        email = data['email']
+        password = data['password']
 
-        db_user = User.query.filter_by(email= email).first()
+        db_user = User.query.filter_by(email=email).first()
         if db_user and check_password_hash(db_user.password, password):
-            access_token = create_access_token(identity= db_user.email, fresh = True)
-            refresh_token = create_refresh_token(identity = db_user.email)
-            return jsonify(
-                {"access_token": access_token, "refresh_token": refresh_token}
-                )
+            access_token = create_access_token(identity=db_user.email, fresh=True)
+            refresh_token = create_refresh_token(identity=db_user.email)
+
+            return jsonify({"access_token": access_token, "refresh_token": refresh_token})
+
+api.add_resource(Projects, '/projects')
+api.add_resource(Signup, '/signUp')
+api.add_resource(Login, '/login')
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+class ProjectsResource(Resource):
+    def get(self):
+        # Assuming 'Project' is the SQLAlchemy model for projects
+        projects = Project.query.all()
+        
+        response_dict = [{
+            'id': project.id,
+            'name': project.name,
+            'description': project.description,
+            'github_link': project.github_link,
+            'user_id': project.user_id,
+            'class_id': project.class_id,
+            'members': project.memebers,
+            'project_type': project.project_type
+        } for project in projects]
+
+        return response_dict
+    def post(self):
+
+        data = request.form
+
+        required_fields = ['name','description', 'github_link','user_id','class_id', 'memebers', 'project_type']
+        for field in required_fields:
+            if field not in data:
+                return {"error": f"'{field}' is required"}, 400
+            
+        new_project = Project(
+            name=data['name'],
+            description=data['description'],
+            github_link=data['github_link'],
+            user_id=data['user_id'],
+            class_id=data['class_id'],
+            memebers=data['memebers'],
+            project_type=data['project_type']
+        )
+
+        db.session.add(new_project)
+        db.session.commit()
+
+        response_dict = new_project.to_dict()
+        return response_dict,201
+class ProjectByIdResource(Resource):
+    def delete(self, id):
+        project = Project.query.get(id)
+        if project:
+            db.session.delete(project)
+            db.session.commit()
+            return {"message": "Project deleted successfully"}, 200
+        return {"message": "Project not found"}, 404
+
+class ClassResource(Resource):
+    def get(self):
+        response_dict = [n.to_dict() for n in Class.query.all()]
+
+        response = make_response(
+            jsonify(response_dict),
+            200
+        )
+
+        return response
+    
+    def post(self):
+        data = request.form
+
+        required_fields = ['name','user_id','admin_id']
+        for field in required_fields:
+            if field not in data:
+                return {"error": f"'{field}' is required"}, 400
+            
+        new_class = Class(
+            name=data['name'],
+            user_id=data['user_id'],
+            admin_id=data['admin_id']
+        )
+
+        db.session.add(new_class)
+        db.session.commit()
+
+        response_dict = new_class.to_dict()
+        return response_dict,201
+    
+class ProjectUsersResource(Resource):
+    def get(self, id):
+        project = Project.query.get(id)
+
+        if project:
+            users = project.project_users  # Access the project_users relationship
+            user_data = [{'id': user.id, 'username': user.username, 'email': user.email} for user in users]
+            return user_data, 200
+        return {"message": "Project not found"}, 404
+    
+api.add_resource(ClassResource, '/classes')
+api.add_resource(ProjectUsersResource, '/projects/<int:id>')
+api.add_resource(ProjectByIdResource, '/project/<int:id>')
+api.add_resource(ProjectsResource, '/projects')    
         
 if __name__ == '__main__':
     app.run(port=5555)
