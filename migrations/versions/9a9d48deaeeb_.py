@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 56491e7e6630
+Revision ID: 9a9d48deaeeb
 Revises: 
-Create Date: 2023-10-27 23:07:33.135289
+Create Date: 2023-10-30 12:34:16.314425
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '56491e7e6630'
+revision = '9a9d48deaeeb'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -25,16 +25,10 @@ def upgrade():
     sa.Column('password', sa.String(length=255), nullable=False),
     sa.Column('first_name', sa.String(length=80), nullable=True),
     sa.Column('last_name', sa.String(length=80), nullable=True),
+    sa.Column('role', sa.String(length=80), nullable=True),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('email'),
     sa.UniqueConstraint('username')
-    )
-    op.create_table('admin',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('user_id', sa.Integer(), nullable=False),
-    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('user_id')
     )
     op.create_table('classes',
     sa.Column('id', sa.Integer(), nullable=False),
@@ -74,6 +68,5 @@ def downgrade():
     op.drop_table('project_members')
     op.drop_table('projects')
     op.drop_table('classes')
-    op.drop_table('admin')
     op.drop_table('users')
     # ### end Alembic commands ###

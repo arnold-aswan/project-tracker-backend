@@ -12,7 +12,7 @@ class User(db.Model):
     password = db.Column(db.String(255), nullable=False)
     first_name = db.Column(db.String(80), nullable=True, default="Unknown")
     last_name = db.Column(db.String(80), nullable=True, default="Unknown")
-
+    role = db.Column(db.String(80), nullable=True, default="Student")
 
     # Rename the 'project_members_relationship' property to 'project_members'.
     project_members = db.relationship('Project', secondary='project_members', back_populates='project_users')
@@ -20,15 +20,15 @@ class User(db.Model):
     # Define a one-to-many relationship for projects created by this user.
     projects = db.relationship('Project', backref='owner', lazy=True)
 
-class Admin(db.Model):
-    __tablename__ = 'admin'
+# class Admin(db.Model):
+#     __tablename__ = 'admin'
 
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), unique=True, nullable=False)
-    user = db.relationship('User', backref='admin')
+#     id = db.Column(db.Integer, primary_key=True)
+#     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), unique=True, nullable=False)
+#     user = db.relationship('User', backref='admin')
 
-    def __init__(self, user_id):
-        self.user_id = user_id
+
+
 
 class Class(db.Model):
     __tablename__ = 'classes'
