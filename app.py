@@ -66,7 +66,9 @@ class Signup(Resource):
             last_name=data['last_name'],
             username=data['username'],
             email=data['email'],
-            password=generate_password_hash(data['password'])
+            password=generate_password_hash(data['password']),
+            role=data['role']
+
         )
         db.session.add(new_user)
         db.session.commit()
@@ -78,6 +80,7 @@ class Login(Resource):
         data = login_parser.parse_args()
         email = data['email']
         password = data['password']
+        role = data['role']
 
         db_user = User.query.filter_by(email=email).first()
         if db_user and check_password_hash(db_user.password, password):
