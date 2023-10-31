@@ -13,6 +13,8 @@ def generate_fake_data():
         # Generate fake users
         for _ in range(num_users):
             user = User(
+                first_name=fake.first_name(),
+                last_name=fake.last_name(),
                 username=fake.user_name(),
                 email=fake.email(),
                 password_hash='your_password_hash_here'  # Replace with hashed password
