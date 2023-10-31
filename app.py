@@ -6,13 +6,18 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask_jwt_extended import JWTManager,get_jwt_identity, create_access_token, create_refresh_token
 from config import DevConfig
 from flask_sqlalchemy import SQLAlchemy
-from models import User, Project
+from models import User, Project, Class
 from exts import db
 from flask_cors import CORS
 
 app = Flask(__name__)
 CORS(app)
 app.config.from_object(DevConfig)
+
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///project-tracker.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.json.compact = False
+
 
 db.init_app(app)
 
@@ -51,8 +56,20 @@ class Projects(Resource):
         }
 
         return response_dict, 200
+    
+# Classes route
+class Cohort(Resource):
+    def get(self):
+        cohorts = [cohort.to_dict() for cohort in Class.query.all()]
+        
+        response_dict = {
+            "cohorts" : cohorts
+        }    
+        
+        return response_dict, 200    
 
 api.add_resource(Projects, '/projects')
+
 
 # User sign-up area
 
@@ -93,6 +110,9 @@ class Login(Resource):
         db_user=User.query.filter_by(email=email).first()
 
         if db_user and  check_password_hash(db_user.password, password):
+
+api.add_resource(Cohort, "/class")
+
 
             access_token=create_access_token(identity=db_user.username, fresh=True)
             refresh_token=create_refresh_token(identity=db_user.username)

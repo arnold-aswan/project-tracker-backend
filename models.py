@@ -97,3 +97,10 @@ class Class(db.Model):
 
     #One-to-many relationship with projects
     projects = db.relationship('Project', back_populates='project_class')
+
+    def to_dict(self):
+        return {
+            'id':self.id,
+            'name': self.name,
+            'description': self.description,
+        }
