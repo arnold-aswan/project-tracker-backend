@@ -13,6 +13,8 @@ def generate_fake_data():
         # Generate fake users
         for _ in range(num_users):
             user = User(
+                first_name=fake.first_name(),
+                last_name=fake.last_name(),
                 username=fake.user_name(),
                 email=fake.email(),
                 password_hash='your_password_hash_here'  # Replace with hashed password
@@ -30,6 +32,14 @@ def generate_fake_data():
             )
             db.session.add(project)
 
+        # seed classes table
+        for _ in range(num_classes):
+            classs = Class(
+                name=fake.word(),
+                description=fake.sentence()
+            )    
+            db.session.add(classs)
+            
         db.session.commit()
 
 if __name__ == '__main__':
