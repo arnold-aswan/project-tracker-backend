@@ -17,6 +17,8 @@ db.init_app(app)
 
 migrate = Migrate(app, db)
 api = Api(app)
+jwt = JWTManager(app)
+app.config['JWT_SECRET_KEY'] = 'your_secret_key_here'
 
 # Define API models using reqparse and fields
 signup_parser = reqparse.RequestParser()
@@ -25,10 +27,12 @@ signup_parser.add_argument('last_name', type=str, required=True)
 signup_parser.add_argument('username', type=str, required=True)
 signup_parser.add_argument('email', type=str, required=True)
 signup_parser.add_argument('password', type=str, required=True)
+signup_parser.add_argument('role', type=str, default='Student') 
 
 login_parser = reqparse.RequestParser()
 login_parser.add_argument('email', type=str, required=True)
 login_parser.add_argument('password', type=str, required=True)
+login_parser.add_argument('role', type=str, required=True)
 
 project_fields = {
     'id': fields.Integer,
@@ -89,17 +93,7 @@ class Login(Resource):
 
             return jsonify({"access_token": access_token, "refresh_token": refresh_token})
 
-api.add_resource(Projects, '/projects')
-api.add_resource(Signup, '/signUp')
-api.add_resource(Login, '/login')
-
-
-
-
-
-
-
-
+# api.add_resource(Projects, '/projects')
 
 
 
@@ -181,6 +175,7 @@ class ProjectsResource(Resource):
 
         response_dict = new_project.to_dict()
         return response_dict,201
+
 class ProjectByIdResource(Resource):
     def delete(self, id):
         project = Project.query.get(id)
@@ -235,6 +230,8 @@ api.add_resource(ClassResource, '/classes')
 api.add_resource(ProjectUsersResource, '/projects/<int:id>')
 api.add_resource(ProjectByIdResource, '/project/<int:id>')
 api.add_resource(ProjectsResource, '/projects')    
+api.add_resource(Signup, '/signUp')
+api.add_resource(Login, '/login')
         
 if __name__ == '__main__':
     app.run(port=5555)
