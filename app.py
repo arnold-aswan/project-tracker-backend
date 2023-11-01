@@ -22,7 +22,77 @@ jwt = JWTManager(app)
 app.config['JWT_SECRET_KEY'] = 'your_secret_key_here'
 
 # Define API models using reqparse and fields
+signup_parser = reqparse.RequestParser()
+signup_parser.add_argument('first_name', type=str, required=True)
+signup_parser.add_argument('last_name', type=str, required=True)
+signup_parser.add_argument('username', type=str, required=True)
+signup_parser.add_argument('email', type=str, required=True)
+signup_parser.add_argument('password', type=str, required=True)
+signup_parser.add_argument('role', type=str, default='Student') 
 
+login_parser = reqparse.RequestParser()
+login_parser.add_argument('email', type=str, required=True)
+login_parser.add_argument('password', type=str, required=True)
+login_parser.add_argument('role', type=str, required=True)
+
+project_fields = {
+    'id': fields.Integer,
+    'name': fields.String,
+    'description': fields.String,
+    'github_link': fields.String,
+    'user_id': fields.Integer,
+    'class_id': fields.Integer,
+    'members': fields.String,
+    'project_type': fields.String
+}
+
+class Projects(Resource):
+    def get(self):
+        projects = Project.query.all()
+        project_list = [marshal(project, project_fields) for project in projects]
+
+        response_dict = {
+            "projects": project_list
+        }
+
+        return response_dict, 200
+
+class Signup(Resource):
+    def post(self):
+        data = signup_parser.parse_args()
+        email = data['email']
+        db_user = User.query.filter_by(email=email).first()
+
+        if db_user is not None:
+            return make_response(jsonify({"message": f"user with email {email} already exists"}))
+
+        new_user = User(
+            first_name=data['first_name'],
+            last_name=data['last_name'],
+            username=data['username'],
+            email=data['email'],
+            password=generate_password_hash(data['password']),
+            role=data['role']
+
+        )
+        db.session.add(new_user)
+        db.session.commit()
+
+        return make_response(jsonify({"message": "user created successfully"}), 201)
+
+class Login(Resource):
+    def post(self):
+        data = login_parser.parse_args()
+        email = data['email']
+        password = data['password']
+        role = data['role']
+
+        db_user = User.query.filter_by(email=email).first()
+        if db_user and check_password_hash(db_user.password, password):
+            access_token = create_access_token(identity=db_user.email, fresh=True)
+            refresh_token = create_refresh_token(identity=db_user.email)
+
+            return jsonify({"access_token": access_token, "refresh_token": refresh_token})
 
 # api.add_resource(Projects, '/projects')
 class ProjectsResource(Resource):
@@ -129,7 +199,8 @@ api.add_resource(ClassResource, '/classes')
 api.add_resource(ProjectUsersResource, '/projects/<int:id>')
 api.add_resource(ProjectByIdResource, '/project/<int:id>')
 api.add_resource(ProjectsResource, '/projects')    
-
+api.add_resource(Signup, '/signUp')
+api.add_resource(Login, '/login')
         
 if __name__ == '__main__':
     app.run(port=5555)
