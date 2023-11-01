@@ -94,46 +94,6 @@ class Login(Resource):
             return jsonify({"access_token": access_token, "refresh_token": refresh_token})
 
 # api.add_resource(Projects, '/projects')
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 class ProjectsResource(Resource):
     def get(self):
         # Assuming 'Project' is the SQLAlchemy model for projects
@@ -226,6 +186,14 @@ class ProjectUsersResource(Resource):
             return user_data, 200
         return {"message": "Project not found"}, 404
     
+class StudentUserResource(Resource):
+    def get(self):
+        # Get all users with the role "Student"
+        student_users = User.query.filter_by(role='Student').all()
+        user_list = [user.to_dict() for user in student_users]
+        return user_list
+
+api.add_resource(StudentUserResource, '/students')
 api.add_resource(ClassResource, '/classes')
 api.add_resource(ProjectUsersResource, '/projects/<int:id>')
 api.add_resource(ProjectByIdResource, '/project/<int:id>')

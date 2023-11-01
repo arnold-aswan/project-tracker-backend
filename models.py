@@ -20,6 +20,17 @@ class User(db.Model):
     # Define a one-to-many relationship for projects created by this user.
     projects = db.relationship('Project', backref='owner', lazy=True)
 
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'username': self.username,
+            'email': self.email,
+            'first_name': self.first_name,
+            'last_name': self.last_name,
+            'role': self.role
+            # Add other fields you want to include in the dictionary
+        }
+
 # class Admin(db.Model):
 #     __tablename__ = 'admin'
 
