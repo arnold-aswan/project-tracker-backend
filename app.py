@@ -77,7 +77,8 @@ class Signup(Resource):
             last_name = data.get("last_name"),
             username = data.get("username"),
             email= data.get("email"),
-            password = generate_password_hash(data.get("password"))
+            password = generate_password_hash(data.get("password")),
+            role=data.get("role")  # Add the role to the new user
         )
         db.session.add(new_user)
         db.session.commit()
@@ -92,16 +93,17 @@ class Login(Resource):
 
         email = data.get("email")
         password = data.get("password")
+        role = data.get("role")  # Retrieve the role from the request
 
         
-        db_user=User.query.filter_by(email=email).first()
+        db_user=User.query.filter_by(email=email, role=role).first()
 
         if db_user and  check_password_hash(db_user.password, password):
 
             access_token=create_access_token(identity=db_user.username, fresh=True)
             refresh_token=create_refresh_token(identity=db_user.username)
             return jsonify(
-                     {"access_token":access_token, "refresh_token":refresh_token}
+                     {"access_token":access_token, "refresh_token":refresh_token, "role": db_user.role}
                  )
 
 @app.shell_context_processor
