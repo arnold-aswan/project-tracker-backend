@@ -10,8 +10,10 @@ gunicorn = "*"
 flask-migrate = "*"
 flask-jwt-extended = "*"
 flask-cors = "*"
+flask-sqlalchemy = "*"
+werkzeug ="*"
 
 [dev-packages]
 
 [requires]
-python_version = "3.9"
+python_version = "3.10"
