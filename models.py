@@ -1,7 +1,5 @@
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import Column, Integer, String, Table
-from sqlalchemy import CheckConstraint
-
 
 # Create an instance of SQLAlchemy
 from exts import db
@@ -23,15 +21,9 @@ class User(db.Model):
     username = db.Column(db.String(80), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(128), nullable=False)
-    role = db.Column(db.String(20), nullable=False)
-    
-    # Add a CheckConstraint to enforce role values
-    __table_args__ = (
-        CheckConstraint(role.in_(('student', 'admin')), name='role_check'),
-    )
-
     created_at = db.Column(db.DateTime, server_default=db.func.now())
     updated_at = db.Column(db.DateTime, onupdate=db.func.now())
+
     #Many to many relationshio with the user and projects
     projects = db.relationship('Project', secondary=ProjectMember.__table__, back_populates='users')
 
@@ -39,69 +31,47 @@ class Project(db.Model):
     __tablename__ = 'projects'
 
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(80), nullable=False)
-    description = db.Column(db.String(80), nullable=False)
-    admin_id = db.Column(db.Integer, db.ForeignKey('admins.id'))
-    github_link = db.Column(db.String(80), nullable=False)
-    class_id = db.Column(db.Integer, db.ForeignKey('classes.id'))
-    created_at = db.Column(db.DateTime, server_default=db.func.now())
-    updated_at = db.Column(db.DateTime, onupdate=db.func.now())
+    name = db.Column(db.String(255), nullable=False)
+    description = db.Column(db.Text, nullable=False)
+    github_link = db.Column(db.String(255), nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    class_id = db.Column(db.Integer, db.ForeignKey('classes.id'), nullable=False)
+    memebers = db.Column(db.String)
+    project_type = db.Column(db.String(50), nullable=True)
 
-    #Many-to-one relationship with admins
-    admin = db.relationship('Admins', back_populates='projects')
 
-    #Many-to-one relationship with classes
-    project_class = db.relationship('Class', back_populates='projects')
 
-    #Many-to-many relationship with users
-    users = db.relationship('User', secondary=ProjectMember.__table__, back_populates='projects')
+    # Rename the 'group_projects' property to 'project_users'.
+    project_users = db.relationship('User', secondary='project_members', back_populates='project_members')
+
     def to_dict(self):
-        data = {
+        return {
             'id': self.id,
             'name': self.name,
             'description': self.description,
-            'admin_id': self.admin_id,
             'github_link': self.github_link,
-            'class_id': self.class_id,
-            'created_at': self.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+            'user_id':self.user_id,
+            'class_id':self.class_id,
+            'members':self.memebers,
+            'project_type':self.project_type
         }
 
-        if self.updated_at:
-            data['updated_at'] = self.updated_at.strftime('%Y-%m-%d %H:%M:%S')
-        else:
-            data['updated_at'] = None
+project_members = db.Table('project_members',
+    db.Column('project_id', db.Integer, db.ForeignKey('projects.id'), primary_key=True),
+    db.Column('user_id', db.Integer, db.ForeignKey('users.id'), primary_key=True)
+)
 
-        if self.admin:
-            data['admin'] = self.admin.to_dict()
-        else:
-            data['admin'] = None
+# user_in_project = db.Table('user_in_project',
+#     db.Column('user_id', db.Integer, db.ForeignKey('users.id'), primary_key=True),
+#     db.Column('project_id', db.Integer, db.ForeignKey('projects.id'), primary_key=True)
+# )
 
-        if self.project_class:
-            data['project_class'] = self.project_class.to_dict()
-        else:
-            data['project_class'] = None
+# class User_in_project(db.Model):
+#     __tablename__ = 'users_in_project'
 
-        data['users'] = [user.to_dict() for user in self.users]
+#     id = db.Column(db.Integer, primary_key=True)
+#     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+#     project_id = db.Column(db.Integer, db.ForeignKey('projects.id'))
 
-        return data
-
-class Admins(db.Model):
-    __tablename__ = 'admins'
-
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(80), nullable=False)
-    email = db.Column(db.String(120), unique=True, nullable=False)
-    password = db.Column(db.String(128), nullable=False)
-
-    #One-to-many relationship with projects
-    projects = db.relationship('Project', back_populates='admin')
-
-class Class(db.Model):
-    __tablename__ = 'classes'
-
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(80), nullable=False)
-    description = db.Column(db.String(80), nullable=False)
-
-    #One-to-many relationship with projects
-    projects = db.relationship('Project', back_populates='project_class')
+#     user = db.relationship('User', backref='projects_participated', lazy=True)
+#     project = db.relationship('Project', backref='project_participants', lazy=True)

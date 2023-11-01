@@ -1,68 +1,60 @@
-import os
-from flask import Flask, request, make_response,jsonify
-from flask_restx import Api, Resource,fields
+from flask import Flask, request, jsonify, make_response
 from flask_migrate import Migrate
-from werkzeug.security import generate_password_hash, check_password_hash
-from flask_jwt_extended import JWTManager,get_jwt_identity, create_access_token, create_refresh_token
-from config import DevConfig
 from flask_sqlalchemy import SQLAlchemy
-from models import User, Project
-from exts import db
+from flask_restful import Api, Resource, reqparse, fields, marshal
+from werkzeug.security import generate_password_hash, check_password_hash
+from flask_jwt_extended import create_access_token, create_refresh_token, JWTManager
+from models import db, Project, User,  project_members, Class
 from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app)
-app.config.from_object(DevConfig)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///project-tracker.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+# CORS(app, resources={r"/projects/*": {"origins": "http://localhost:5173"}, r"/login": {"origins": "http://localhost:5173"}})
+CORS(app, resources={r"/*": {"origins": "*"}})
+
 
 db.init_app(app)
 
 migrate = Migrate(app, db)
-JWTManager(app)
-
-# app.json.compact = False
-
 api = Api(app)
 
 signup_model = api.model(
     "Signup",
     {
-        "first_name": fields.String(),
-        "last_name": fields.String(),
-        "username": fields.String(),
-        "email": fields.String(),
-        "password": fields.String(),
-        "role": fields.String(enum=["admin", "student"]), 
+        "first_name":fields.String(),
+        "last_name":fields.String(),
+        "username":fields.String(),
+        "email":fields.String(),
+        "password":fields.String(),
     }
 )
 
 login_model = api.model(
     "Login",
     {
-        "email": fields.String(),
-        "password": fields.String(),
-        "role": fields.String(enum=["admin", "student"]), 
+        "email":fields.String(),
+        "password":fields.String(),
     }
 )
-
-
 class Projects(Resource):
 
     def get(self):
-        projects = [project.to_dict() for project in Project.query.all()]
+        # Assuming 'Project' is the SQLAlchemy model for projects
+        projects = Project.query.all()
+        
+        response_dict = [{
+            'id': project.id,
+            'name': project.name,
+            'description': project.description,
+            'github_link': project.github_link,
+            'user_id': project.user_id,
+            'class_id': project.class_id,
+            'members': project.memebers,
+            'project_type': project.project_type
+        } for project in projects]
 
-        response_dict = {
-            "projects": projects  
-        }
-
-        return response_dict, 200
-
-api.add_resource(Projects, '/projects')
-
-# User sign-up area
-
-@api.route("/signUp", methods=["POST"])
-class Signup(Resource):
-    @api.expect(signup_model)
+        return response_dict
     def post(self):
         # getting the user's data
         data= request.get_json()
@@ -77,33 +69,49 @@ class Signup(Resource):
             last_name = data.get("last_name"),
             username = data.get("username"),
             email= data.get("email"),
-            password = generate_password_hash(data.get("password")),
-            role=data.get("role")  # Add the role to the new user
+            password = generate_password_hash(data.get("password"))
         )
         db.session.add(new_user)
         db.session.commit()
-        return make_response(jsonify({"message":"user created successfully"}), 201)
 
-# User log-in area
-@api.route("/login", methods=["POST"])
-class Login(Resource):
-    @api.expect(login_model)
+        response_dict = new_project.to_dict()
+        return response_dict,201
+
+class ProjectByIdResource(Resource):
+    def delete(self, id):
+        project = Project.query.get(id)
+        if project:
+            db.session.delete(project)
+            db.session.commit()
+            return {"message": "Project deleted successfully"}, 200
+        return {"message": "Project not found"}, 404
+
+class ClassResource(Resource):
+    def get(self):
+        response_dict = [n.to_dict() for n in Class.query.all()]
+
+        response = make_response(
+            jsonify(response_dict),
+            200
+        )
+
+        return response
+    
     def post(self):
         data = request.get_json()
 
         email = data.get("email")
         password = data.get("password")
-        role = data.get("role")  # Retrieve the role from the request
 
         
-        db_user=User.query.filter_by(email=email, role=role).first()
+        db_user=User.query.filter_by(email=email).first()
 
         if db_user and  check_password_hash(db_user.password, password):
 
             access_token=create_access_token(identity=db_user.username, fresh=True)
             refresh_token=create_refresh_token(identity=db_user.username)
             return jsonify(
-                     {"access_token":access_token, "refresh_token":refresh_token, "role": db_user.role}
+                     {"access_token":access_token, "refresh_token":refresh_token}
                  )
 
 @app.shell_context_processor
