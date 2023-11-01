@@ -1,5 +1,7 @@
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import Column, Integer, String, Table
+from sqlalchemy import CheckConstraint
+
 
 # Create an instance of SQLAlchemy
 from exts import db
@@ -21,9 +23,15 @@ class User(db.Model):
     username = db.Column(db.String(80), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(128), nullable=False)
+    role = db.Column(db.String(20), nullable=False, server_default='student')
+    
+    # Add a CheckConstraint to enforce role values
+    __table_args__ = (
+        CheckConstraint(role.in_(('student', 'admin')), name='role_check'),
+    )
+
     created_at = db.Column(db.DateTime, server_default=db.func.now())
     updated_at = db.Column(db.DateTime, onupdate=db.func.now())
-
     #Many to many relationshio with the user and projects
     projects = db.relationship('Project', secondary=ProjectMember.__table__, back_populates='users')
 

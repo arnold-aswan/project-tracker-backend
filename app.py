@@ -26,21 +26,25 @@ api = Api(app)
 signup_model = api.model(
     "Signup",
     {
-        "first_name":fields.String(),
-        "last_name":fields.String(),
-        "username":fields.String(),
-        "email":fields.String(),
-        "password":fields.String(),
+        "first_name": fields.String(),
+        "last_name": fields.String(),
+        "username": fields.String(),
+        "email": fields.String(),
+        "password": fields.String(),
+        "role": fields.String(enum=["admin", "student"]), 
     }
 )
 
 login_model = api.model(
     "Login",
     {
-        "email":fields.String(),
-        "password":fields.String(),
+        "email": fields.String(),
+        "password": fields.String(),
+        "role": fields.String(enum=["admin", "student"]), 
     }
 )
+
+
 class Projects(Resource):
 
     def get(self):
