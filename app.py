@@ -177,15 +177,28 @@ class ClassResource(Resource):
         response_dict = new_class.to_dict()
         return response_dict,201
     
+
+
 class ProjectUsersResource(Resource):
     def get(self, id):
         project = Project.query.get(id)
 
         if project:
-            users = project.project_users  # Access the project_users relationship
-            user_data = [{'id': user.id, 'username': user.username, 'email': user.email} for user in users]
-            return user_data, 200
+            user = User.query.get(project.user_id)  # Get the user who created the project
+            if user:
+                user_data = {
+                    'id': user.id,
+                    'username': user.username,
+                    'email': user.email,
+                    'first_name': user.first_name,
+                    'last_name': user.last_name,
+                    'role': user.role
+                }
+                return user_data, 200
+            else:
+                return {"message": "User not found"}, 404
         return {"message": "Project not found"}, 404
+
     
 class StudentUserResource(Resource):
     def get(self):
