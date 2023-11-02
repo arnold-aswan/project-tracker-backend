@@ -92,7 +92,7 @@ class Login(Resource):
             access_token = create_access_token(identity=db_user.email, fresh=True)
             refresh_token = create_refresh_token(identity=db_user.email)
 
-            return jsonify({"access_token": access_token, "refresh_token": refresh_token})
+            return jsonify({"access_token": access_token, "refresh_token": refresh_token, role:role})
 
 # api.add_resource(Projects, '/projects')
 class ProjectsResource(Resource):
