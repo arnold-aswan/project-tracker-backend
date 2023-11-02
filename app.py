@@ -190,14 +190,14 @@ class ClassResource(Resource):
     def post(self):
         data = request.form
 
-        required_fields = ['name','user_id','admin_id']
+        required_fields = ['name','admin_id'] #'<=user_id'
         for field in required_fields:
             if field not in data:
                 return {"error": f"'{field}' is required"}, 400
             
         new_class = Class(
             name=data['name'],
-            user_id=data['user_id'],
+            # user_id=data['user_id'],
             admin_id=data['admin_id']
         )
 
