@@ -85,16 +85,19 @@ class Login(Resource):
         data = login_parser.parse_args()
         email = data['email']
         password = data['password']
-        
+        role = data['role']
 
         db_user = User.query.filter_by(email=email).first()
+
         if db_user and check_password_hash(db_user.password, password):
-            access_token = create_access_token(identity=db_user.email, fresh=True)
-            refresh_token = create_refresh_token(identity=db_user.email)
-
-            return jsonify({"access_token": access_token, "refresh_token": refresh_token, "role":db_user.role})
-        return make_response(jsonify({"message": "Invalid email or password"}), 401)
-
+            if db_user.role == role:
+                access_token = create_access_token(identity=db_user.email, fresh=True)
+                refresh_token = create_refresh_token(identity=db_user.email)
+                return jsonify({"access_token": access_token, "refresh_token": refresh_token, "role": role})
+            else:
+                return make_response(jsonify({"message": "Invalid role for this user"}), 401)
+        else:
+            return make_response(jsonify({"message": "Invalid email or password"}), 401)
 # api.add_resource(Projects, '/projects')
 
 class UsersResource(Resource):
