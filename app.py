@@ -102,7 +102,7 @@ class Login(Resource):
             if db_user.role == role:
                 access_token = create_access_token(identity=db_user.email, fresh=True)
                 refresh_token = create_refresh_token(identity=db_user.email)
-                return jsonify({"access_token": access_token, "refresh_token": refresh_token, "role": role})
+                return jsonify({"access_token": access_token, "refresh_token": refresh_token, "role": role, "user_id": db_user.id,})
             else:
                 return make_response(jsonify({"message": "Invalid role for this user"}), 401)
         else:
