@@ -93,8 +93,26 @@ class Login(Resource):
             refresh_token = create_refresh_token(identity=db_user.email)
 
             return jsonify({"access_token": access_token, "refresh_token": refresh_token, role:role})
+        return make_response(jsonify({"message": "Invalid email or password"}), 401)
 
 # api.add_resource(Projects, '/projects')
+
+class UsersResource(Resource):
+    def get(self):
+        # Assuming 'Project' is the SQLAlchemy model for projects
+        users = User.query.all()
+        
+        response_dict = [{
+            'id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'firstname': user.firstname,
+            'lastname': user.lastname,
+            'role': user.role,
+            
+        } for user in users]
+
+        return response_dict
 class ProjectsResource(Resource):
     def get(self):
         # Assuming 'Project' is the SQLAlchemy model for projects
@@ -204,6 +222,7 @@ class StudentUserResource(Resource):
         user_list = [user.to_dict() for user in student_users]
         return user_list
 
+api.add_resource(UsersResource, '/users')
 api.add_resource(StudentUserResource, '/students')
 api.add_resource(ClassResource, '/classes')
 api.add_resource(ProjectUsersResource, '/projects/<int:id>')
