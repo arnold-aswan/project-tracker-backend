@@ -77,8 +77,17 @@ class Signup(Resource):
         )
         db.session.add(new_user)
         db.session.commit()
+        
+        response_dict = {
+            'id': new_user.id,
+            'first_name': new_user.first_name,
+            'last_name': new_user.last_name,
+            'username': new_user.username,
+            'email': new_user.email,
+            'role': new_user.role
+        }
 
-        return make_response(jsonify({"message": "user created successfully"}), 201)
+        return make_response(jsonify({"message": "user created successfully", "user": response_dict}), 201)
 
 class Login(Resource):
     def post(self):
