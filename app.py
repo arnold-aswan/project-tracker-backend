@@ -144,7 +144,7 @@ class ProjectsResource(Resource):
         return response_dict
     def post(self):
 
-        data = request.form
+        data = request.get_json()
 
         required_fields = ['name','description', 'github_link','user_id','class_id', 'memebers', 'project_type']
         for field in required_fields:
