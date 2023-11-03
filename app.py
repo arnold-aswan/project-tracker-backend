@@ -188,7 +188,8 @@ class ClassResource(Resource):
         return response
     
     def post(self):
-        data = request.form
+        # data = request.form
+        data = request.get_json()
 
         required_fields = ['name','admin_id'] #'<=user_id'
         for field in required_fields:
