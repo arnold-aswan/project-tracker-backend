@@ -127,19 +127,31 @@ class UsersResource(Resource):
         return response_dict, 200
 class ProjectsResource(Resource):
     def get(self):
-        # Assuming 'Project' is the SQLAlchemy model for projects
         projects = Project.query.all()
-        
-        response_dict = [{
-            'id': project.id,
-            'name': project.name,
-            'description': project.description,
-            'github_link': project.github_link,
-            'user_id': project.user_id,
-            'class_id': project.class_id,
-            'members': project.memebers,
-            'project_type': project.project_type
-        } for project in projects]
+        response_dict = []
+
+        for project in projects:
+            user = User.query.get(project.user_id) 
+
+            project_info = {
+                'id': project.id,
+                'name': project.name,
+                'description': project.description,
+                'github_link': project.github_link,
+                'user_id': project.user_id,
+                'class_id': project.class_id,
+                'members': project.memebers,
+                'project_type': project.project_type,
+                'user': {
+                    'id': user.id,
+                    'username': user.username,
+                    'email': user.email,
+                    'first_name': user.first_name,
+                    'last_name': user.last_name,
+                    'role': user.role
+                }
+            }
+            response_dict.append(project_info)
 
         return response_dict
     def post(self):
