@@ -158,18 +158,21 @@ class ProjectsResource(Resource):
 
         data = request.get_json()
 
-        required_fields = ['name','description', 'github_link','user_id','class_id', 'memebers', 'project_type']
+        required_fields = ['name','description', 'github_link','user_id','class_id', 'project_type'] #<='memebers'
         for field in required_fields:
             if field not in data:
                 return {"error": f"'{field}' is required"}, 400
-            
+
+        memebers = data.get('memebers', [])
+        
         new_project = Project(
             name=data['name'],
             description=data['description'],
             github_link=data['github_link'],
             user_id=data['user_id'],
             class_id=data['class_id'],
-            memebers=data['memebers'],
+            # memebers=data['memebers'],
+            memebers=', '.join(memebers),
             project_type=data['project_type']
         )
 
