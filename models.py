@@ -1,7 +1,5 @@
 from flask_sqlalchemy import SQLAlchemy
-
 db = SQLAlchemy()
-
 
 class User(db.Model):
     __tablename__ = 'users'
@@ -95,22 +93,22 @@ class Project(db.Model):
             'project_type':self.project_type
         }
 
-project_members = db.Table('project_members',
-    db.Column('project_id', db.Integer, db.ForeignKey('projects.id'), primary_key=True),
-    db.Column('user_id', db.Integer, db.ForeignKey('users.id'), primary_key=True)
-)
 
-# user_in_project = db.Table('user_in_project',
-#     db.Column('user_id', db.Integer, db.ForeignKey('users.id'), primary_key=True),
-#     db.Column('project_id', db.Integer, db.ForeignKey('projects.id'), primary_key=True)
-# )
 
-# class User_in_project(db.Model):
-#     __tablename__ = 'users_in_project'
+class ProjectMember(db.Model):
+    __tablename__ = 'project_members'
 
-#     id = db.Column(db.Integer, primary_key=True)
-#     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
-#     project_id = db.Column(db.Integer, db.ForeignKey('projects.id'))
+    project_id = db.Column(db.Integer, db.ForeignKey('projects.id'), primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key=True)
 
-#     user = db.relationship('User', backref='projects_participated', lazy=True)
-#     project = db.relationship('Project', backref='project_participants', lazy=True)
+
+    user = db.relationship('User', backref=db.backref('projects_membership', cascade="all, delete-orphan"))
+    project = db.relationship('Project', backref=db.backref('project_members', cascade="all, delete-orphan"))
+
+
+
+    def to_dict(self):
+        return {
+            'project_id': self.project_id,
+            'user_id': self.user_id
+        }

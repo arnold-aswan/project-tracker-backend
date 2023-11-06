@@ -4,8 +4,9 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_restful import Api, Resource, reqparse, fields, marshal
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_jwt_extended import create_access_token, create_refresh_token, JWTManager
-from models import db, Project, User,  project_members, Class
+from models import db, Project, User,  ProjectMember, Class
 from flask_cors import CORS
+import logging
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///project-tracker.db'
@@ -78,7 +79,17 @@ class Signup(Resource):
         db.session.add(new_user)
         db.session.commit()
 
-        return make_response(jsonify({"message": "user created successfully"}), 201)
+        response_dict = {
+            'id': new_user.id,
+            'first_name': new_user.first_name,
+            'last_name': new_user.last_name,
+            'username': new_user.username,
+            'email': new_user.email,
+            'role': new_user.role
+        }
+
+        return make_response(jsonify({"message": "user created successfully", "user": response_dict}), 201)
+
 
 class Login(Resource):
     def post(self):
@@ -89,11 +100,14 @@ class Login(Resource):
 
         db_user = User.query.filter_by(email=email).first()
         if db_user and check_password_hash(db_user.password, password):
-            access_token = create_access_token(identity=db_user.email, fresh=True)
-            refresh_token = create_refresh_token(identity=db_user.email)
-
-            return jsonify({"access_token": access_token, "refresh_token": refresh_token})
-
+            if db_user.role == role:
+                access_token = create_access_token(identity=db_user.email, fresh=True)
+                refresh_token = create_refresh_token(identity=db_user.email)
+                return jsonify({"access_token": access_token, "refresh_token": refresh_token, "role": role, "user_id": db_user.id,  })
+            else:
+                return make_response(jsonify({"message": "Invalid role for this user"}), 401)
+        else:
+            return make_response(jsonify({"message": "Invalid email or password"}), 401)
 # api.add_resource(Projects, '/projects')
 class ProjectsResource(Resource):
     def get(self):
@@ -101,37 +115,35 @@ class ProjectsResource(Resource):
         response_dict = []
 
         for project in projects:
-            user = User.query.get(project.user_id) 
+            user = User.query.get(project.user_id)
 
-            project_info = {
-                'id': project.id,
-                'name': project.name,
-                'description': project.description,
-                'github_link': project.github_link,
-                'user_id': project.user_id,
-                'class_id': project.class_id,
-                'members': project.memebers,
-                'project_type': project.project_type,
-                'user': {
-                    'id': user.id,
-                    'username': user.username,
-                    'email': user.email,
-                    'first_name': user.first_name,
-                    'last_name': user.last_name,
-                    'role': user.role
-                }
-            }
+            project_info = project.to_dict()
+            user_info = user.to_dict()
+            project_info['user'] = user_info
+
+            # Fetch project members for the current project
+            project_members = ProjectMember.query.filter_by(project_id=project.id).all()
+            members_data = []
+
+            for member in project_members:
+                if member.user:
+                    members_data.append(member.user.to_dict())
+
+            project_info['project_members'] = members_data
             response_dict.append(project_info)
 
         return response_dict
+
     def post(self):
 
-        data = request.form
+        data = request.get_json()
 
-        required_fields = ['name','description', 'github_link','user_id','class_id', 'memebers', 'project_type']
+        required_fields = ['name','description', 'github_link','user_id','class_id', 'project_type'] #<='memebers'
         for field in required_fields:
             if field not in data:
                 return {"error": f"'{field}' is required"}, 400
+
+        memebers = data.get('memebers', [])
         
         new_project = Project(
             name=data['name'],
@@ -139,7 +151,8 @@ class ProjectsResource(Resource):
             github_link=data['github_link'],
             user_id=data['user_id'],
             class_id=data['class_id'],
-            memebers=data['memebers'],
+            # memebers=data['memebers'],
+            memebers=', '.join(memebers),
             project_type=data['project_type']
         )
 
@@ -170,16 +183,16 @@ class ClassResource(Resource):
         return response
     
     def post(self):
-        data = request.form
+        data = request.get_json()
 
-        required_fields = ['name','user_id','admin_id']
+        required_fields = ['name','admin_id'] #'<=user_id'
         for field in required_fields:
             if field not in data:
                 return {"error": f"'{field}' is required"}, 400
             
         new_class = Class(
             name=data['name'],
-            user_id=data['user_id'],
+            # user_id=data['user_id'],
             admin_id=data['admin_id']
         )
 
@@ -218,6 +231,48 @@ class StudentUserResource(Resource):
         student_users = User.query.filter_by(role='Student').all()
         user_list = [user.to_dict() for user in student_users]
         return user_list
+    
+class ProjectMembersResource(Resource):
+    def get(self, project_id):
+        # Get the members of a specific project
+        project = Project.query.get(project_id)
+        if project:
+            project_members = project.project_members  # This assumes that you have a back-reference from Project to User for project_members
+            members_data = [user.to_dict() for user in project_members]
+            return members_data, 200
+        return {"message": "Project not found"}, 404
+
+
+    def post(self):
+        data = request.get_json()
+
+        project_id = data.get('project_id')
+        user_id = data.get('user_id')
+
+        if project_id is None or user_id is None:
+            return {"message": "project_id and user_id are required in the request data"}, 400
+
+        project = Project.query.get(project_id)
+        if project is None:
+            return {"message": "Project not found"}, 404
+
+        # Check if the user is already a member of the project
+        if ProjectMember.query.filter_by(project_id=project_id, user_id=user_id).first() is not None:
+            return {"message": "User is already a member of the project"}, 400
+
+        project_member = ProjectMember(project_id=project_id, user_id=user_id)
+
+        try:
+            db.session.add(project_member)
+            db.session.commit()
+            response_dict = project_member.to_dict()
+            return response_dict, 201
+        except Exception as e:
+            db.session.rollback()
+            return {"message": "An error occurred while adding the user to the project"}, 500
+
+api.add_resource(ProjectMembersResource, '/projectmembers' )
+
 
 api.add_resource(StudentUserResource, '/students')
 api.add_resource(ClassResource, '/classes')
