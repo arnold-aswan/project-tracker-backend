@@ -13,7 +13,7 @@ def create_fake_users(num_users):
                 password=fake.password(),
                 first_name=fake.first_name(),
                 last_name=fake.last_name(),
-                role=fake.random_element(elements=("Student", "Teacher", "Admin"))
+                role=fake.random_element(elements=("Student", "Admin"))
             )
             db.session.add(user)
 
@@ -39,8 +39,8 @@ def create_fake_projects(num_projects):
                 github_link=fake.url(),
                 user_id=fake.random_int(min=1, max=User.query.count()),
                 class_id=fake.random_int(min=1, max=Class.query.count()),
-                members=fake.random_element(elements=("Student", "Teacher")),
-                project_type=fake.random_element(elements=("Open Source", "Closed Source", "Group"))
+                memebers=fake.random_element(elements=("Student")),
+                project_type=fake.random_element(elements=("Android", "Fullstack"))
             )
             db.session.add(project)
 
@@ -57,7 +57,13 @@ if __name__ == '__main__':
     num_fake_users = 10
     num_fake_classes = 5
     num_fake_projects = 15
-    num_fake_project_members = 30
+    num_fake_project_members = 20
+
+    # clear database
+    db.delete(User)
+    db.delete(Class)
+    db.delete(Project)
+    db.delete(ProjectMember)
 
     # Create fake data for each table
     create_fake_users(num_fake_users)

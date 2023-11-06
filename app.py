@@ -79,7 +79,17 @@ class Signup(Resource):
         db.session.add(new_user)
         db.session.commit()
 
-        return make_response(jsonify({"message": "user created successfully"}), 201)
+        response_dict = {
+            'id': new_user.id,
+            'first_name': new_user.first_name,
+            'last_name': new_user.last_name,
+            'username': new_user.username,
+            'email': new_user.email,
+            'role': new_user.role
+        }
+
+        return make_response(jsonify({"message": "user created successfully", "user": response_dict}), 201)
+
 
 class Login(Resource):
     def post(self):
@@ -90,11 +100,14 @@ class Login(Resource):
 
         db_user = User.query.filter_by(email=email).first()
         if db_user and check_password_hash(db_user.password, password):
-            access_token = create_access_token(identity=db_user.email, fresh=True)
-            refresh_token = create_refresh_token(identity=db_user.email)
-
-            return jsonify({"access_token": access_token, "refresh_token": refresh_token})
-
+            if db_user.role == role:
+                access_token = create_access_token(identity=db_user.email, fresh=True)
+                refresh_token = create_refresh_token(identity=db_user.email)
+                return jsonify({"access_token": access_token, "refresh_token": refresh_token, "role": role, "user_id": db_user.id,  })
+            else:
+                return make_response(jsonify({"message": "Invalid role for this user"}), 401)
+        else:
+            return make_response(jsonify({"message": "Invalid email or password"}), 401)
 # api.add_resource(Projects, '/projects')
 class ProjectsResource(Resource):
     def get(self):
@@ -123,12 +136,14 @@ class ProjectsResource(Resource):
 
     def post(self):
 
-        data = request.form
+        data = request.get_json()
 
-        required_fields = ['name','description', 'github_link','user_id','class_id', 'memebers', 'project_type']
+        required_fields = ['name','description', 'github_link','user_id','class_id', 'project_type'] #<='memebers'
         for field in required_fields:
             if field not in data:
                 return {"error": f"'{field}' is required"}, 400
+
+        memebers = data.get('memebers', [])
         
         new_project = Project(
             name=data['name'],
@@ -136,7 +151,8 @@ class ProjectsResource(Resource):
             github_link=data['github_link'],
             user_id=data['user_id'],
             class_id=data['class_id'],
-            memebers=data['memebers'],
+            # memebers=data['memebers'],
+            memebers=', '.join(memebers),
             project_type=data['project_type']
         )
 
@@ -167,16 +183,16 @@ class ClassResource(Resource):
         return response
     
     def post(self):
-        data = request.form
+        data = request.get_json()
 
-        required_fields = ['name','user_id','admin_id']
+        required_fields = ['name','admin_id'] #'<=user_id'
         for field in required_fields:
             if field not in data:
                 return {"error": f"'{field}' is required"}, 400
             
         new_class = Class(
             name=data['name'],
-            user_id=data['user_id'],
+            # user_id=data['user_id'],
             admin_id=data['admin_id']
         )
 
@@ -228,7 +244,7 @@ class ProjectMembersResource(Resource):
 
 
     def post(self):
-        data = request.json
+        data = request.get_json()
 
         project_id = data.get('project_id')
         user_id = data.get('user_id')
@@ -254,7 +270,6 @@ class ProjectMembersResource(Resource):
         except Exception as e:
             db.session.rollback()
             return {"message": "An error occurred while adding the user to the project"}, 500
-
 
 api.add_resource(ProjectMembersResource, '/projectmembers' )
 
