@@ -1,5 +1,6 @@
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import Column, Integer, String, Table
+import pytest
 
 # Create an instance of SQLAlchemy
 from exts import db
