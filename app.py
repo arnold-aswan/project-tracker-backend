@@ -107,24 +107,7 @@ class Login(Resource):
                 return make_response(jsonify({"message": "Invalid role for this user"}), 401)
         else:
             return make_response(jsonify({"message": "Invalid email or password"}), 401)
-# api.add_resource(Projects, '/projects')
 
-class UsersResource(Resource):
-    def get(self):
-        # Assuming 'Project' is the SQLAlchemy model for projects
-        users = User.query.all()
-        
-        response_dict = [{
-            'id': user.id,
-            'username': user.username,
-            'email': user.email,
-            'firstname': user.firstname,
-            'lastname': user.lastname,
-            'role': user.role,
-            
-        } for user in users]
-
-        return response_dict, 200
 class ProjectsResource(Resource):
     def get(self):
         projects = Project.query.all()
@@ -249,9 +232,20 @@ class StudentUserResource(Resource):
         student_users = User.query.filter_by(role='Student').all()
         user_list = [user.to_dict() for user in student_users]
         return user_list
+ 
+class StudentUserByIdResource(Resource):    
+    def get(self, user_id):
+        # Get the student user with the specified ID
+        student_user = User.query.filter_by(id=user_id, role='Student').first()
 
-api.add_resource(UsersResource, '/users')
+        if not student_user:
+            return {'message': 'Student not found'}, 404
+
+        return student_user.to_dict(), 200
+
+# api.add_resource(UsersResource, '/users') 
 api.add_resource(StudentUserResource, '/students')
+api.add_resource(StudentUserByIdResource, '/students/<int:user_id>')
 api.add_resource(ClassResource, '/classes')
 api.add_resource(ProjectUsersResource, '/projects/<int:id>')
 api.add_resource(ProjectByIdResource, '/project/<int:id>')
